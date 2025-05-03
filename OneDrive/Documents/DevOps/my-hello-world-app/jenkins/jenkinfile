@@ -1,0 +1,91 @@
+// Define the agent where the pipeline will run
+// 'any' means Jenkins will run the pipeline on any available agent
+agent any
+
+// Define environment variables
+environment {
+    // Replace with your Docker Hub username
+    DOCKER_HUB_USERNAME = "${DOCKERHUB_CREDENTIALS_USR}" // Use Jenkins Credentials ID
+    // Replace with your Docker Hub image name (e.g., your-username/hello-world-app)
+    DOCKER_IMAGE_NAME = "your-dockerhub-username/hello-world-app" // Replace with your image name
+    // Replace with the public IP or DNS of your EC2 instance
+    EC2_HOST = "YOUR_EC2_PUBLIC_IP_OR_DNS" // Replace with the actual EC2 public IP or DNS
+    // Replace with the Jenkins Credentials ID for SSH access to EC2
+    EC2_SSH_CREDENTIALS_ID = "your-ec2-ssh-credentials-id" // Replace with your Jenkins Credentials ID
+}
+
+// Define the pipeline stages
+stages {
+    // Stage 1: Checkout the source code from Git
+    stage('Checkout') {
+        steps {
+            git branch: 'main', url: 'YOUR_GIT_REPO_URL' // Replace with your Git repository URL
+        }
+    }
+
+    // Stage 2: Build the Docker image
+    stage('Build Docker Image') {
+        steps {
+            script {
+                // Change directory to the docker folder
+                dir('docker') {
+                    // Build the Docker image
+                    // Use the commit hash or build number as the tag for versioning
+                    def imageTag = "${env.BUILD_NUMBER}" // Or use "${env.GIT_COMMIT}"
+                    sh "docker build -t ${env.DOCKER_IMAGE_NAME}:${imageTag} ."
+                    sh "docker tag ${env.DOCKER_IMAGE_NAME}:${imageTag} ${env.DOCKER_IMAGE_NAME}:latest" // Also tag as latest
+                }
+            }
+        }
+    }
+
+    // Stage 3: Login to Docker Hub and Push the Docker image
+    stage('Push Docker Image') {
+        steps {
+            script {
+                // Use Jenkins Credentials for Docker Hub login
+                withCredentials([usernamePassword(credentialsId: 'dockerhub-credentials', usernameVariable: 'DOCKERHUB_CREDENTIALS_USR', passwordVariable: 'DOCKERHUB_CREDENTIALS_PSW')]) {
+                    sh "echo \"${DOCKERHUB_CREDENTIALS_PSW}\" | docker login --username ${DOCKERHUB_CREDENTIALS_USR} --password-stdin"
+                    sh "docker push ${env.DOCKER_IMAGE_NAME}:latest"
+                    def imageTag = "${env.BUILD_NUMBER}"
+                    sh "docker push ${env.DOCKER_IMAGE_NAME}:${imageTag}"
+                }
+            }
+        }
+    }
+
+    // Stage 4: Deploy to EC2
+    stage('Deploy to EC2') {
+        steps {
+            script {
+                // Use Jenkins SSH agent to connect to EC2
+                sshagent([env.EC2_SSH_CREDENTIALS_ID]) {
+                    // SSH into the EC2 instance and run commands
+                    sh """
+                        ssh -o StrictHostKeyChecking=no ec2-user@${env.EC2_HOST} << 'EOF'
+                        # Stop the running container if it exists
+                        docker stop hello-world-container || true
+                        # Remove the old container if it exists
+                        docker rm hello-world-container || true
+                        # Login to Docker Hub (if needed, can be done via user data too)
+                        # echo "YOUR_DOCKERHUB_PASSWORD" | docker login --username YOUR_DOCKERHUB_USERNAME --password-stdin
+                        # Pull the latest image
+                        docker pull ${env.DOCKER_IMAGE_NAME}:latest
+                        # Run the new container
+                        docker run -d --name hello-world-container -p 80:80 ${env.DOCKER_IMAGE_NAME}:latest
+                        EOF
+                    """
+                }
+            }
+        }
+    }
+}
+
+// Post-build actions (optional)
+post {
+    always {
+        // Clean up workspace
+        cleanWs()
+    }
+}
+latest

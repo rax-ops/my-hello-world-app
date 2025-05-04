@@ -1,33 +1,51 @@
+version: '3.8' # Recommended to use a recent version
+
 services:
   jenkins:
-    image: jenkins/jenkins:lts
-    
+    # --- FIX APPLIED HERE ---
+    # Use the 'build' instruction to build from your Dockerfile.jenkins
+    build:
+      context: .               # Look for the Dockerfile in the current directory
+      dockerfile: Dockerfile.jenkins # Specify the name of your custom Dockerfile
+    # ------------------------
+
     container_name: jenkins
     restart: always
-    privileged: true
-    user: root
-    ports:
-      - "8080:8080"
-    volumes:
-      - "C:/Users/rashm/.ssh:/var/jenkins_home/.ssh"
-      - "C:/Users/rashm/.m2:/root/.m2"
-      - "C:/app:/app"
-      - "C:/docker/jenkins/jenkins_home:/var/jenkins_home"
-      - "C:/Windows/Fonts:/usr/share/fonts"
-      - "C:/Users/rashm/DockerDesktopWSL:/data"  # ✅ FIXED: now has a container path
-      - jenkins_home:/var/jenkins_home
-      - /var/run/docker.sock:/var/run/docker.sock
-      - /usr/bin/docker:/usr/bin/docker
+    privileged: true          # Needed for Docker-in-Docker or accessing host Docker socket
+    user: root                # Run as root initially to ensure volume permissions/socket access
 
+    ports:
+      - "8080:8080"           # Jenkins web UI
+      # - "50000:50000"       # Jenkins agent port (if needed)
+
+    volumes:
+      # Mapping for SSH keys (adjust path for your OS)
+      - "C:/Users/rashm/.ssh:/var/jenkins_home/.ssh"
+      # Mapping for Maven settings/repository (adjust path, consider mapping for the 'jenkins' user instead of root if possible)
+      - "C:/Users/rashm/.m2:/root/.m2"
+      # Mapping for application code/data (adjust path)
+      - "C:/app:/app"
+      # Persistent volume for Jenkins data
+      - jenkins_home:/var/jenkins_home
+      # Mapping for fonts (if UI issues occur)
+      - "C:/Windows/Fonts:/usr/share/fonts"
+      # Mapping for WSL data if needed (adjust path, less likely required for *this* pipeline)
+      - "C:/Users/rashm/DockerDesktopWSL:/data"
+      # Mount the Docker socket from the host to allow the container to run Docker commands on the host
+      - /var/run/docker.sock:/var/run/docker.sock
+
+  # This service builds and runs your static web app container for local testing
   web:
     build:
-      context: .
-      dockerfile: docker/Dockerfile
+      context: .              # Build context is the current directory (where docker-compose.yml is)
+      dockerfile: docker/Dockerfile # Path to the Dockerfile for the web app
     container_name: static-web
     ports:
-      - "8081:80"
-    restart: always
+      - "8081:80"             # Map host port 8081 to container port 80
+    restart: always           # Restart if the container stops
 
 networks:
-  default:
+  default: # Uses the default bridge network created by docker-compose
 
+volumes:
+  jenkins_home: # Defines the named volume for Jenkins persistence

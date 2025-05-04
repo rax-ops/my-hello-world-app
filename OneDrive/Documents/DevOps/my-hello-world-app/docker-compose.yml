@@ -1,16 +1,33 @@
-version: '3.8'
-
 services:
   jenkins:
     image: jenkins/jenkins:lts
+    
     container_name: jenkins
+    restart: always
+    privileged: true
     user: root
     ports:
       - "8080:8080"
-      - "50000:50000"
     volumes:
+      - "C:/Users/rashm/.ssh:/var/jenkins_home/.ssh"
+      - "C:/Users/rashm/.m2:/root/.m2"
+      - "C:/app:/app"
+      - "C:/docker/jenkins/jenkins_home:/var/jenkins_home"
+      - "C:/Windows/Fonts:/usr/share/fonts"
+      - "C:/Users/rashm/DockerDesktopWSL:/data"  # ✅ FIXED: now has a container path
       - jenkins_home:/var/jenkins_home
       - /var/run/docker.sock:/var/run/docker.sock
+      - /usr/bin/docker:/usr/bin/docker
 
-volumes:
-  jenkins_home:
+  web:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+    container_name: static-web
+    ports:
+      - "8081:80"
+    restart: always
+
+networks:
+  default:
+

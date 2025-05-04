@@ -1,0 +1,65 @@
+pipeline {
+    agent any
+
+    environment {
+        EC2_HOST = "13.50.249.139"
+        SSH_CRED_ID = "AWS"
+        REMOTE_PORT = "8081"
+        REMOTE_USER = "ubuntu"  // use ec2-user for Amazon Linux    
+    }
+
+    stages {
+        stage('Clone Repo') {
+            steps {
+                git url: 'https://github.com/rax-ops/my-hello-world-app', branch: 'master'
+            }
+        }
+        
+        stage('Test Docker Access') {
+            steps {
+                sh 'docker --version'
+            }
+        }
+
+
+       stage('Build Docker Image') {
+            steps {
+                sh 'docker build -t hello-world-app -f docker/Dockerfile .'
+            }
+        }
+
+        stage('Save Docker Image') {
+            steps {
+                sh 'docker save hello-world-app -o hello-world-app.tar'
+            }
+        }
+
+        stage('Copy Image to EC2') {
+            steps {
+                sshagent (credentials: [env.SSH_CRED_ID]) {
+                    sh "scp -o StrictHostKeyChecking=no hello-world-app.tar ${REMOTE_USER}@${EC2_HOST}:/home/${REMOTE_USER}/"
+                }
+            }
+        }
+
+        stage('Deploy on EC2') {
+            steps {
+                sshagent (credentials: [env.SSH_CRED_ID]) {
+                    sh """
+                        ssh -o StrictHostKeyChecking=no ${REMOTE_USER}@${EC2_HOST} '
+                            docker load < hello-world-app.tar &&
+                            docker rm -f hello-world-app || true &&
+                            docker run -d -p ${REMOTE_PORT}:80 --name hello-world-app hello-world-app
+                        '
+                    """
+                }
+            }
+        }
+    }
+
+    post {
+        success {
+            echo "✅ Deployment complete: http://${EC2_HOST}:${REMOTE_PORT}"
+        }
+    }
+}

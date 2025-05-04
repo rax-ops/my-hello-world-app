@@ -31,7 +31,7 @@ pipeline {
             steps {
                 // Build the Docker image using the Dockerfile in the 'docker' directory
                 // -t tags the image, -f specifies the Dockerfile path, . is the build context
-                sh 'docker build -t hello-world-app -f docker/Dockerfile .'
+                sh 'docker build -t hello-world-app -f Docker/Dockerfile .'
             }
         }
 

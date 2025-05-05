@@ -16,9 +16,16 @@ pipeline {
         stage('Clone Repo') {
             steps {
                 // Clone the source code from the Git repository
-                git url: 'https://github.com/rax-ops/my-hello-world-app', branch: 'master'
+                git url: 'https://github.com/rax-ops/my-hello-world-app.git', branch: 'master'
             }
         }
+
+        stage('Verify Cloned Files') {
+                steps {
+                    sh 'ls -l'         // Check for 'docker' or 'Docker'
+                    sh 'ls -l Docker/' // or sh 'ls -l Docker/' depending on what you find
+                }
+            }
 
         stage('Test Docker Access') {
             steps {

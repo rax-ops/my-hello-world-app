@@ -1,13 +1,14 @@
 // my-hello-world-app-web: latest this is my image pipeline
+
 pipeline {
     agent any // Specifies that the pipeline can run on any available Jenkins agent
 
     // Define environment variables used throughout the pipeline
     environment {
         EC2_HOST = "13.50.249.139" // Public IP or hostname of your EC2 instance
-        SSH_CRED_ID = "AWS"       // ID of the SSH credentials stored in Jenkins
-        REMOTE_PORT = "8081"      // Port on EC2 to expose the app
-        REMOTE_USER = "ubuntu"    // User to SSH into the EC2 instance (use ec2-user for Amazon Linux)
+        SSH_CRED_ID = "AWS"        // ID of the SSH credentials stored in Jenkins
+        REMOTE_PORT = "8081"       // Port on EC2 to expose the app
+        REMOTE_USER = "ubuntu"     // User to SSH into the EC2 instance (use ec2-user for Amazon Linux)
     }
 
     // Define the sequence of stages in the pipeline
@@ -19,6 +20,14 @@ pipeline {
             }
         }
 
+        stage('Verify Cloned Files') {
+                steps {
+                    sh 'ls -la'       // Check for 'docker' or 'Docker' - added -a for hidden files
+                    sh 'ls -R'        // List contents of directories recursively
+                    sh 'pwd'          // Print current working directory
+                }
+            }
+
         stage('Test Docker Access') {
             steps {
                 // Verify that the Jenkins agent has the docker command available
@@ -28,9 +37,10 @@ pipeline {
 
         stage('Build Docker Image') {
             steps {
-                // Build the Docker image using the Dockerfile in the 'docker' directory
+                // Build the Docker image using the Dockerfile in the 'Docker' directory
                 // -t tags the image, -f specifies the Dockerfile path, . is the build context
-                sh 'docker build -t hello-world-app -f Docker/Dockerfile .'
+                // CORRECTED PATH based on the provided directory structure
+                sh 'docker build -t hello-world-app -f ./OneDrive/Documents/DevOps/my-hello-world-app/Docker/Dockerfile .'
             }
         }
 
@@ -48,7 +58,7 @@ pipeline {
                 sshagent (credentials: [env.SSH_CRED_ID]) {
                     // Copy the image archive to the EC2 instance using scp
                     // -o StrictHostKeyChecking=no disables host key verification (use with caution!)
-                    sh "scp -o StrictHostKeyChecking=no hello-world-app.tar ${REMOTE_USER}@${EC2_HOST}:/home/${REMATE_USER}/"
+                    sh "scp -o StrictHostKeyChecking=no hello-world-app.tar ${REMOTE_USER}@${EC2_HOST}:/home/${REMOTE_USER}/" // Corrected REMATE_USER to REMOTE_USER
                 }
             }
         }

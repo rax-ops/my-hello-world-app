@@ -5,8 +5,8 @@ pipeline {
 
     // Define environment variables used throughout the pipeline
     environment {
-        EC2_HOST = "13.50.249.139" // Public IP or hostname of your EC2 instance
-        SSH_CRED_ID = "AWS"        // ID of the SSH credentials stored in Jenkins
+        EC2_HOST = "13.53.217.176" // Public IP or hostname of your EC2 instance
+        SSH_CRED_ID = "SSH_CRED_ID"        // ID of the SSH credentials stored in Jenkins
         REMOTE_PORT = "8081"       // Port on EC2 to expose the app
         REMOTE_USER = "ec2-user"     // User to SSH into the EC2 instance (use ec2-user for Amazon Linux)
     }

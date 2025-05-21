@@ -9,3 +9,6 @@ COPY ./OneDrive/Documents/DevOps/my-hello-world-app/website /usr/share/nginx/htm
 EXPOSE 80
 # The default command of the Nginx image starts the web server
 # No need to specify CMD here unless you want to override it
+
+
+# MY FIRST COMMIT

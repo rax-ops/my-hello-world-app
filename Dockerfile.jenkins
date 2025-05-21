@@ -1,0 +1,18 @@
+# Dockerfile.jenkins
+# Start from the official Jenkins LTS image
+FROM jenkins/jenkins:lts
+
+# Switch to the root user to perform system-level installations
+USER root
+
+# Update package lists, install the docker.io package (contains the Docker CLI),
+# and add the 'jenkins' user to the 'docker' group so it can use the docker socket
+RUN apt-get update && \
+    apt-get install -y docker.io && \
+    usermod -aG docker jenkins # Add the 'jenkins' user to the 'docker' group for socket access
+
+# Switch back to the default 'jenkins' user that the Jenkins process runs as
+USER jenkins
+
+# You can add other tools or configurations here if needed for your builds
+# e.g., Maven, Node.js, etc.

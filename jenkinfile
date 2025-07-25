@@ -2,15 +2,12 @@
 
 pipeline {
     agent any // Specifies that the pipeline can run on any available Jenkins agent
-
-    // Define environment variables used throughout the pipeline
-    environment {
+      environmet {
         EC2_HOST = "13.50.249.139" // Public IP or hostname of your EC2 instance
-        SSH_CRED_ID = "AWS"       // ID of the SSH credentials stored in Jenkins
+        SSH_CRED_ID = "SSH_CRED_ID"       // ID of the SSH credentials stored in Jenkins
         REMOTE_PORT = "8081"      // Port on EC2 to expose the app
-        REMOTE_USER = "ubuntu"    // User to SSH into the EC2 instance (use ec2-user for Amazon Linux)
-    }
-
+        REMOTE_USER = "ec2-user"    // User to SSH into the EC2 instance (use ec2-user for Amazon Linux)
+      }
     // Define the sequence of stages in the pipeline
     stages {
         stage('Clone Repo') {
@@ -20,6 +17,14 @@ pipeline {
             }
         }
 
+        stage('Verify Cloned Files') {
+                steps {
+                    sh 'ls -la'       // Check for 'docker' or 'Docker' - added -a for hidden files
+                    sh 'ls -R'        // List contents of directories recursively
+                    sh 'pwd'          // Print current working directory
+                }
+            }
+
         stage('Test Docker Access') {
             steps {
                 // Verify that the Jenkins agent has the docker command available
@@ -27,34 +32,72 @@ pipeline {
             }
         }
 
-        stage('Build Docker Image') {
+        stage('Test Docker Access') {
             steps {
-                // Build the Docker image using the Dockerfile in the 'docker' directory
-                // -t tags the image, -f specifies the Dockerfile path, . is the build context
-                sh 'docker build -t hello-world-app -f Docker/Dockerfile .'
+                // Verify that the Jenkins agent has the docker command available
+                sh 'docker --version'
             }
         }
-
-        stage('Save Docker Image') {
+        
+        stage('MAaven') {
             steps {
-                // Save the built Docker image as a tar archive
+                // Build the Docker image using the Dockerfile in the 'Docker' directory
+                // -t tags the image, -f specifies the Dockerfile path, . is the build context
+                // CORRECTED PATH based on the provided directory structure
+                sh 'docker build -t hello-world-app -f ./OneDrive/Documents/DevOps/my-hello-world-app/Docker/Dockerfile .'
+            }
+            
+        }
+        Stage {
+            terraform tasks
+        }
+
+        stage('Save Docker Image') {   //// in a repository
+            steps {
+                // Save the built Docker image as a tar archive //unsecured
                 // -o specifies the output file name
                 sh 'docker save hello-world-app -o hello-world-app.tar'
             }
         }
 
-        stage('Copy Image to EC2') {
+        stage('Copy Image to EC2') { /// no copy - we will pull the image from repo and deploy
+
             steps {
                 // Use the Jenkins SSH Agent to make the SSH key available
                 sshagent (credentials: [env.SSH_CRED_ID]) {
                     // Copy the image archive to the EC2 instance using scp
                     // -o StrictHostKeyChecking=no disables host key verification (use with caution!)
-                    sh "scp -o StrictHostKeyChecking=no hello-world-app.tar ${REMOTE_USER}@${EC2_HOST}:/home/${REMATE_USER}/"
+                    sh "scp -o StrictHostKeyChecking=no hello-world-app.tar ${REMOTE_USER}@${EC2_HOST}:/home/${REMOTE_USER}/" // Corrected REMATE_USER to REMOTE_USER
                 }
             }
         }
 
-        stage('Deploy on EC2') {
+        stage('Smoke test' -Unit tes)
+        stage('Copy Image to EC2 - SIT') { /// no copy - we will pull the image from repo and deploy
+
+            steps {
+                // Use the Jenkins SSH Agent to make the SSH key available
+                sshagent (credentials: [env.SSH_CRED_ID]) {
+                    // Copy the image archive to the EC2 instance using scp
+                    // -o StrictHostKeyChecking=no disables host key verification (use with caution!)
+                    sh "scp -o StrictHostKeyChecking=no hello-world-app.tar ${REMOTE_USER}@${EC2_HOST}:/home/${REMOTE_USER}/" // Corrected REMATE_USER to REMOTE_USER
+                }
+            }
+        }
+        
+        stage('Copy Image to EC2 - PAT') { /// no copy - we will pull the image from repo and deploy
+
+            steps {
+                // Use the Jenkins SSH Agent to make the SSH key available
+                sshagent (credentials: [env.SSH_CRED_ID]) {
+                    // Copy the image archive to the EC2 instance using scp
+                    // -o StrictHostKeyChecking=no disables host key verification (use with caution!)
+                    sh "scp -o StrictHostKeyChecking=no hello-world-app.tar ${REMOTE_USER}@${EC2_HOST}:/home/${REMOTE_USER}/" // Corrected REMATE_USER to REMOTE_USER
+                }
+            }
+        }
+
+        stage('Deploy on EC2' - PROD) {
             steps {
                 // Use the SSH Agent again
                 sshagent (credentials: [env.SSH_CRED_ID]) {
@@ -76,6 +119,7 @@ pipeline {
             }
         }
     }
+   
 
     // Actions to perform after the main stages
     post {
@@ -84,5 +128,27 @@ pipeline {
             echo "✅ Deployment complete: http://${EC2_HOST}:${REMOTE_PORT}"
         }
         // You could add other blocks like 'failure', 'always', 'cleanup', etc.
+    }
+    stage {
+        steps {
+            sh 'kubectl apply -f srv.yaml'
+            sh 'kubectl apply -f cm.yaml'
+        }
+    }
+
+    Stage ('Terraform Init'){
+        steps {
+            sh terraform init
+        }
+    }
+    Stage ('Terraform Plan'){
+        steps {
+            sh terraform plan
+        }
+    }
+    Stage ('Terraform Apply'){
+        steps {
+            sh terraform apply -auto-approve
+        }
     }
 }

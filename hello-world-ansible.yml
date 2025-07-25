@@ -1,0 +1,53 @@
+---
+- name: Deploy Hello World Website
+  hosts: localhost
+  connection: local
+  become: true
+
+  vars:
+    web_root: /var/www/html
+    html_file: "{{ web_root }}/index.html"
+
+  tasks:
+    - name: Install Nginx
+      apt:
+        name: nginx
+        state: present
+        update_cache: true
+
+    - name: Ensure Nginx is started and enabled
+      service:
+        name: nginx
+        state: started
+        enabled: true
+
+    - name: Deploy Hello World HTML
+      copy:
+        dest: "{{ html_file }}"
+        content: |
+          <!DOCTYPE html>
+          <html lang="en">
+          <head>
+              <meta charset="UTF-8">
+              <meta name="viewport" content="width=device-width, initial-scale=1.0">
+              <title>Hello World!</title>
+              <style>
+                  body {
+                      display: flex;
+                      justify-content: center;
+                      align-items: center;
+                      min-height: 100vh;
+                      margin: 0;
+                      font-family: sans-serif;
+                      background-color: #f0f0f0;
+                      color: #333;
+                  }
+                  h1 {
+                      color: #007bff;
+                  }
+              </style>
+          </head>
+          <body>
+              <h1>Hello, DEvOPS!</h1>
+          </body>
+          </html>

@@ -1,0 +1,37 @@
+pipeline {
+    agent any
+
+    stages {
+        stage('Install Terraform on Windows') {
+            steps {
+                bat '''
+                set T_VERSION=1.7.5
+                set T_ZIP=terraform_%T_VERSION%_windows_amd64.zip
+                set DOWNLOAD_URL=https://releases.hashicorp.com/terraform/%T_VERSION%/%T_ZIP%
+
+                curl -o %T_ZIP% %DOWNLOAD_URL%
+                powershell -Command "Expand-Archive -Path %T_ZIP% -DestinationPath . -Force"
+                move terraform.exe C:\\terraform\\terraform.exe
+                set PATH=C:\\terraform;%PATH%
+                C:\\terraform\\terraform.exe version
+                '''
+            }
+        }
+        
+       Stage ('Terraform version'){
+        steps {
+            sh terraform version
+        }
+        stage {'kubernetes deployment'}
+        {
+            kubectl apply -f blue.yaml  //10% traffic
+       
+        }
+
+        stage {'kubernetes deployment'}
+        {
+            kubectl apply -f green.yaml //90% traffic
+       
+        }
+    }
+}

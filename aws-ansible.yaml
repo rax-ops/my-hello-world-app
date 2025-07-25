@@ -1,0 +1,11 @@
+---
+- name: "Launch EC2 instance"
+  hosts: localhost
+  connection: local
+  tasks:
+  - name : "Launch EC2 Instance"
+    amazon.aws.ec2_instance:
+    name: "deployer"
+    keyname: "my-kepair"
+    instance_type: "t2"
+    
